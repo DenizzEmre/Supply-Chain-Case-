@@ -1,0 +1,981 @@
+<title>Campus Print Shop Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: one phone-width column; sticky light top bar (team, round, step dots, profit), one task card per screen, sticky bottom bar whose button unlocks when the screen is complete. Screen-print shop look: paper, ink, gold, with no dark panels. */
+:root {
+  --paper: #F4EFE3; --card: #FFFCF4; --ink: #1D1B17; --ink-2: #57514A; --line: #D9D0BD;
+  --gold: #E0A22A; --on-gold: #1D1B17; --soft: #EDE6D4; --gold-soft: #F7E8C6;
+  --good: #2F7A4B; --good-bg: #E2F0E5; --warn: #94600A; --warn-bg: #F7EBD2; --bad: #A83F2A; --bad-bg: #F6E0D8;
+  --display: 'Oswald', 'Arial Narrow', Arial, sans-serif;
+  --body: 'Public Sans', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #15130F; --card: #201D17; --ink: #F2ECDF; --ink-2: #BDB4A4; --line: #3A352C;
+  --gold: #E7AE3C; --on-gold: #1D1B17; --soft: #2A261F; --gold-soft: #3A2F18;
+  --good: #74C493; --good-bg: #1C3325; --warn: #E8B860; --warn-bg: #3A2D14; --bad: #F08F77; --bad-bg: #3C2019;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #15130F; --card: #201D17; --ink: #F2ECDF; --ink-2: #BDB4A4; --line: #3A352C;
+  --gold: #E7AE3C; --on-gold: #1D1B17; --soft: #2A261F; --gold-soft: #3A2F18;
+  --good: #74C493; --good-bg: #1C3325; --warn: #E8B860; --warn-bg: #3A2D14; --bad: #F08F77; --bad-bg: #3C2019;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--card); }
+.wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--card); color: var(--ink); border-bottom: 1px solid var(--line); }
+.top .wrap { padding-block: 10px; display: flex; flex-direction: column; gap: 8px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .5px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand .reg { width: 18px; height: 18px; flex: none; }
+.brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-right { display: flex; align-items: center; gap: 14px; }
+.restart { background: none; border: 0; padding: 4px 0; font: inherit; font-size: 13px; color: var(--ink-2); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+.money { font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.money small { font-family: var(--body); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-2); margin-right: 6px; }
+.steps { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.round-chip { font-family: var(--display); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; background: var(--gold); color: var(--on-gold); padding: 2px 10px; border-radius: 999px; }
+.dot { font-size: 12px; letter-spacing: .5px; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+.dot.on { background: var(--gold-soft); color: var(--ink); border-color: var(--gold); font-weight: 700; }
+.dot.done { color: var(--ink); border-color: var(--ink-2); }
+
+/* Main */
+main .wrap { padding-block: 20px 140px; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: 40px; text-transform: uppercase; letter-spacing: .5px; }
+h2 { font-size: 28px; text-transform: uppercase; letter-spacing: .5px; }
+h3 { font-size: 20px; letter-spacing: .3px; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-2); }
+.lead { font-size: 18px; color: var(--ink); }
+.muted { color: var(--ink-2); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.news { background: var(--gold-soft); border: 1px solid var(--gold); }
+.news .eyebrow { color: var(--ink-2); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+.stat { background: var(--soft); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: var(--display); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: 13px; color: var(--ink-2); }
+ul.clean { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Tables */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-2); font-weight: 700; }
+td.num, th.num { text-align: right; }
+
+/* Forms */
+label { font-weight: 600; font-size: 15px; }
+input[type="text"], input[type="number"], textarea {
+  width: 100%; font: inherit; font-size: 17px; color: var(--ink); background: var(--paper);
+  border: 2px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+textarea { min-height: 84px; resize: vertical; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.hint { font-size: 13px; color: var(--ink-2); }
+.check-line { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; }
+.check-line input { width: 22px; height: 22px; margin-top: 2px; flex: none; accent-color: var(--gold); }
+
+button { font: inherit; cursor: pointer; border-radius: 8px; }
+.btn { background: var(--card); color: var(--ink); border: 2px solid var(--ink); padding: 8px 14px; font-weight: 700; }
+.btn.small { padding: 4px 10px; font-size: 14px; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.primary { background: var(--gold); color: var(--on-gold); border: none; padding: 14px 18px; font-family: var(--display); font-size: 20px; letter-spacing: .5px; text-transform: uppercase; width: 100%; }
+.primary:disabled { background: var(--soft); color: var(--ink-2); cursor: not-allowed; }
+
+/* Question blocks */
+.q { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.q:first-of-type { border-top: none; padding-top: 0; }
+.q-line { display: flex; gap: 8px; align-items: stretch; }
+.q-line input { flex: 1; min-width: 0; }
+.unit { align-self: center; color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.feedback { font-size: 14px; }
+.feedback.good { color: var(--good); }
+.feedback.bad { color: var(--bad); }
+.feedback.warn { color: var(--warn); }
+
+/* Orders */
+.sup { display: grid; grid-template-columns: 1fr 110px; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; }
+.sup:first-of-type { border-top: none; padding-top: 0; }
+.sup .meta { font-size: 13px; color: var(--ink-2); }
+.sup input { text-align: right; }
+
+/* Schedule */
+.job { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.job:first-of-type { border-top: none; padding-top: 0; }
+.job .n { font-family: var(--display); font-size: 22px; text-align: center; }
+.job .meta { font-size: 13px; color: var(--ink-2); }
+.order-card { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.order-card:first-child { border-top: none; padding-top: 0; }
+.order-card .meta { font-size: 13px; color: var(--ink-2); }
+.job .moves { display: flex; gap: 6px; }
+.gantt { width: 100%; height: auto; display: block; }
+
+/* Bottom bar */
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.bottom .wrap { padding-block: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gate { font-size: 13px; color: var(--ink-2); text-align: center; min-height: 18px; }
+
+/* Report + code */
+.code { font-family: var(--display); font-size: 34px; letter-spacing: 3px; text-align: center; background: var(--gold-soft); color: var(--ink); border: 2px solid var(--gold); border-radius: 8px; padding: 12px; font-variant-numeric: tabular-nums; user-select: all; overflow-wrap: anywhere; }
+.quote { border-left: 4px solid var(--gold); padding-left: 12px; }
+
+/* Instructor */
+.timer { font-family: var(--display); font-size: 72px; text-align: center; font-variant-numeric: tabular-nums; line-height: 1; }
+.seg-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.rank { font-family: var(--display); font-size: 20px; }
+
+@media (min-width: 900px) { body.instructor .wrap { max-width: 1040px; } }
+@media (prefers-reduced-motion: no-preference) { .card { animation: rise .25s ease-out both; } @keyframes rise { from { transform: translateY(6px); } to { transform: none; } } }
+</style>
+
+<header class="top" id="top"></header>
+<main><div class="wrap" id="app"></div></main>
+<footer class="bottom" id="bottom"></footer>
+
+<script>
+(function () {
+"use strict";
+
+/* ---------- Game data (matches the case study doc) ---------- */
+const SUP = {
+  A: { name: "A: Overseas", price: 3.00, fee: 80, lead: 2, note: "Arrives 2 weeks later" },
+  B: { name: "B: Domestic", price: 4.50, fee: 50, lead: 1, note: "Arrives next week" },
+  C: { name: "C: Local",    price: 6.00, fee: 20, lead: 0, note: "Arrives this week, up to 300", max: 300 }
+};
+const JOBS = {
+  1: [ { id: "eng", name: "Engineering Club", q: 50, due: 10, pen: 100, why: "Shirts for its booth at Friday's career fair." },
+       { id: "dance", name: "Dance Marathon", q: 50, due: 8, pen: 100, why: "Volunteer shirts for Thursday's kickoff." },
+       { id: "soccer", name: "Intramural Soccer", q: 100, due: 4, pen: 100, why: "Jerseys for Tuesday's playoff game." } ],
+  2: [ { id: "chem", name: "Campus Blood Drive", q: 50, due: 6, pen: 100, why: "Volunteer shirts for Wednesday's blood drive." },
+       { id: "robotics", name: "Robotics Club", q: 100, due: 2, pen: 100, why: "Team shirts for Monday's competition." },
+       { id: "alumni", name: "Alumni Brunch", q: 50, due: 4, pen: 100, why: "Shirts for Tuesday's brunch." } ],
+  3: [ { id: "stugov", name: "Student Government", q: 150, due: 10, pen: 300, why: "Shirts for Friday's Homecoming parade." },
+       { id: "watch", name: "Football Watch Party", q: 100, due: 6, pen: 200, why: "Shirts for Wednesday's watch party." },
+       { id: "nursing", name: "Nursing Society", q: 50, due: 10, pen: 100, why: "Shirts for a Friday fundraiser." },
+       { id: "ise", name: "ISE Department", q: 100, due: 4, pen: 100, why: "Shirts for Tuesday's open lab day." } ],
+  4: [ { id: "committee", name: "Homecoming Committee", q: 150, due: 8, pen: 300, why: "Volunteer shirts for Thursday's setup." },
+       { id: "alumniassoc", name: "Alumni Association", q: 150, due: 10, pen: 200, why: "Shirts for Friday's alumni tailgate." },
+       { id: "band", name: "Marching Band", q: 50, due: 10, pen: 100, why: "Shirts for Friday's halftime show." } ]
+};
+const WALK = { 1: 50, 2: 50, 3: 75, 4: 400 };
+const PRICE_JOB = 10, PRICE_WALK = 15, HOLD = 0.10, SALVAGE = 2;
+const TOTAL_JOBS = 13;
+const ROUND_TITLE = { 1: "Getting started", 2: "A shipment is stuck", 3: "Too many orders", 4: "Homecoming week" };
+const STEPS = [ ["news", "This week"], ["check", "Quick math"], ["order", "Buy shirts"], ["schedule", "Plan the press"], ["results", "Results"] ];
+const DAYS = { 2: "Monday", 4: "Tuesday", 6: "Wednesday", 8: "Thursday", 10: "Friday" };
+const DAY_LIST = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const doneDay = h => DAY_LIST[Math.min(5, Math.max(0, Math.ceil(h / 2) - 1))];
+
+const pressTime = q => 1 + q / 50;
+const fmt$ = n => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(Math.round(n * 100) / 100) ? 0 : 2, maximumFractionDigits: 2 });
+const fmtN = n => Math.round(n).toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dueLabel = h => DAYS[h] || "Saturday";
+
+/* ---------- State ---------- */
+const KEY = "print-shop-game-v2";
+function fresh() {
+  return {
+    v: 2, view: "story", team: "", members: "", briefOk: false,
+    r: 1, step: "news", shelf: 400,
+    pipe: [ { id: "pre", sup: "A", qty: 500, placed: 0, arrive: 2, got: false } ],
+    started: {}, arrivals: {}, shelfStart: {},
+    ans: {}, tries: {}, shown: {}, ok: {},
+    draft: {}, orders: {}, purchases: {},
+    seq: {}, results: {}, refl: ["", "", ""], final: null
+  };
+}
+let S = load() || fresh();
+function load() { try { const raw = localStorage.getItem(KEY); const st = raw ? JSON.parse(raw) : null; return st && st.v === 2 ? st : null; } catch (e) { return null; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === "function") {
+  try { window.claude.hot.snapshot(() => ({ S })); } catch (e) {}
+}
+
+/* ---------- Engine ---------- */
+function enterRound(r) {
+  if (S.started[r]) return;
+  S.started[r] = true;
+  if (r === 2) S.pipe.forEach(p => { if (p.sup === "A" && !p.got) p.arrive += 1; });
+  let got = 0;
+  S.pipe.forEach(p => { if (!p.got && p.arrive === r) { p.got = true; S.shelf += p.qty; got += p.qty; } });
+  S.arrivals[r] = got;
+  S.shelfStart[r] = S.shelf;
+  if (!S.seq[r]) S.seq[r] = JOBS[r].map(j => j.id);
+  if (!S.draft[r]) S.draft[r] = { A: "", B: "", C: "" };
+}
+function arriveRound(sup, r) { return r + SUP[sup].lead + (sup === "A" && r >= 2 ? 1 : 0); }
+function onTheWay() { return S.pipe.filter(p => !p.got); }
+function parseQty(v) { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? n : 0; }
+function orderCost(o) { let c = 0; ["A", "B", "C"].forEach(k => { if (o[k] > 0) c += SUP[k].fee + SUP[k].price * o[k]; }); return c; }
+
+function placeOrders(r) {
+  const d = S.draft[r], o = { A: parseQty(d.A), B: parseQty(d.B), C: parseQty(d.C) };
+  S.orders[r] = o; S.purchases[r] = orderCost(o);
+  ["A", "B"].forEach(k => { if (o[k] > 0) S.pipe.push({ id: k + r, sup: k, qty: o[k], placed: r, arrive: arriveRound(k, r), got: false }); });
+  if (o.C > 0) { S.pipe.push({ id: "C" + r, sup: "C", qty: o.C, placed: r, arrive: r, got: true }); S.shelf += o.C; }
+}
+
+/* Runs one week for a given order of jobs without changing state. */
+function simulate(r, seq, shelf) {
+  const byId = {}; JOBS[r].forEach(j => byId[j.id] = j);
+  let t = 0, inv = shelf, jobRev = 0, pen = 0; const rows = [];
+  seq.forEach(id => {
+    const j = byId[id], need = pressTime(j.q);
+    if (inv >= j.q) {
+      inv -= j.q; const start = t; t += need; jobRev += PRICE_JOB * j.q;
+      const late = t > j.due; if (late) pen += j.pen;
+      rows.push({ j, start, end: t, status: late ? "late" : "ok", pen: late ? j.pen : 0 });
+    } else {
+      pen += j.pen;
+      rows.push({ j, start: null, end: null, status: "lost", pen: j.pen, short: j.q - inv });
+    }
+  });
+  const walkServed = Math.min(inv, WALK[r]); inv -= walkServed;
+  return { rows, jobRev, pen, walkServed, walkLost: WALK[r] - walkServed, walkRev: PRICE_WALK * walkServed, end: inv, hours: t };
+}
+
+function runWeek(r) {
+  const sim = simulate(r, S.seq[r], S.shelf);
+  const hold = HOLD * sim.end;
+  const purch = S.purchases[r] || 0;
+  S.shelf = sim.end;
+  S.results[r] = {
+    jobRev: sim.jobRev, walkRev: sim.walkRev, purch, hold, pen: sim.pen,
+    walkLost: sim.walkLost, end: sim.end,
+    onTime: sim.rows.filter(x => x.status === "ok").length,
+    late: sim.rows.filter(x => x.status === "late").map(x => x.j.name),
+    lost: sim.rows.filter(x => x.status === "lost").map(x => x.j.name),
+    profit: sim.jobRev + sim.walkRev - purch - hold - sim.pen
+  };
+}
+
+function finish() {
+  const pendingAfter = S.pipe.filter(p => !p.got).reduce((s, p) => s + p.qty, 0);
+  const salvageUnits = S.shelf + pendingAfter;
+  const rs = [1, 2, 3, 4].map(r => S.results[r]);
+  const sum = k => rs.reduce((s, x) => s + x[k], 0);
+  const salvage = SALVAGE * salvageUnits;
+  S.final = {
+    revenue: sum("jobRev") + sum("walkRev"), purch: sum("purch"), hold: sum("hold"), pen: sum("pen"),
+    salvage, salvageUnits, leftover: S.shelf, lateArrivals: pendingAfter,
+    walkLost: sum("walkLost"), onTime: sum("onTime"),
+    profit: sum("profit") + salvage
+  };
+}
+function profitSoFar() {
+  let p = 0; Object.keys(S.results).forEach(k => p += S.results[k].profit);
+  if (S.final) p = S.final.profit;
+  return p;
+}
+
+/* ---------- Score code (teams read it to the instructor) ---------- */
+const OFFSET = 50000;
+function makeCode(f) {
+  const profit = Math.max(-OFFSET, Math.min(OFFSET - 1, Math.round(f.profit)));
+  const lost = Math.min(2000, f.walkLost), left = Math.min(4000, f.leftover + f.lateArrivals);
+  let v = (((profit + OFFSET) * 14 + f.onTime) * 2001 + lost) * 4001 + left;
+  const check = v % 97;
+  const s = (v.toString(36) + check.toString(36).padStart(2, "0")).toUpperCase();
+  return s.replace(/(.{4})(?=.)/g, "$1-");
+}
+function readCode(code) {
+  const s = String(code).toUpperCase().replace(/[^0-9A-Z]/g, "");
+  if (s.length < 4) return null;
+  const body = s.slice(0, -2), check = parseInt(s.slice(-2), 36);
+  const v = parseInt(body, 36);
+  if (!Number.isFinite(v) || v % 97 !== check) return null;
+  let x = v;
+  const left = x % 4001; x = Math.floor(x / 4001);
+  const lost = x % 2001; x = Math.floor(x / 2001);
+  const onTime = x % 14; x = Math.floor(x / 14);
+  const profit = x - OFFSET;
+  if (onTime > TOTAL_JOBS) return null;
+  return { profit, onTime, lost, left };
+}
+
+/* ---------- Round questions ---------- */
+function questions(r) {
+  const shelf = S.shelfStart[r];
+  if (r === 1) return [
+    { id: "eoq", label: "If we buy from the domestic supplier (B), how many shirts should we order at a time? Use EOQ with 250 shirts a week, a $50 fee per order, and $0.10 to store one shirt for a week.", unit: "shirts", ans: 500, hint: "EOQ = √(2 × D × S ÷ H) = √(2 × 250 × 50 ÷ 0.10)." },
+    { id: "cycle", label: "At that order size, how many weeks apart would our orders be?", unit: "weeks", ans: 2, hint: "Weeks between orders = order size ÷ shirts used per week." },
+    { id: "rop", label: "The domestic supplier takes 1 week to deliver. When the shelf drops to how many shirts should we place the next order? (This is the reorder point.)", unit: "shirts", ans: 250, hint: "Reorder point = shirts used per week × weeks to deliver." },
+    { id: "ip", label: "How many shirts do we have in total right now, counting the shelf and the shipment on the way? (This is the inventory position.)", unit: "shirts", ans: 900, hint: "Shirts on the shelf + shirts on the way." }
+  ];
+  if (r === 2) return [
+    { id: "have", label: "How many shirts are on the shelf right now?", unit: "shirts", ans: shelf, hint: "Look at the shelf number above." },
+    { id: "need", label: "How many shirts do we need this week for the three orders plus walk-ins?", unit: "shirts", ans: 250, hint: "Add the shirts for the three orders, then add 50 walk-ins." },
+    { id: "short", label: "How many shirts are we short? Enter 0 if we have enough.", unit: "shirts", ans: Math.max(0, 250 - shelf), hint: "Shirts needed − shirts on the shelf." }
+  ];
+  if (r === 3) return [
+    { id: "have", label: "How many shirts are on the shelf after this morning's delivery?", unit: "shirts", ans: shelf, hint: "Look at the shelf number above." },
+    { id: "need", label: "How many shirts do we need this week for the four orders plus walk-ins?", unit: "shirts", ans: 475, hint: "The four orders need 400 shirts. Add 75 walk-ins." },
+    { id: "edd", label: "If we print the jobs in order of due day (EDD), how much do we pay in late penalties?", unit: "dollars", ans: 300, hint: "By due day: ISE (Tuesday), Watch Party (Wednesday), then the two Friday jobs, shorter first: Nursing, then Student Government. Running press hours: 3, 6, 8, 12. Friday ends at hour 10." }
+  ];
+  return [
+    { id: "have", label: "How many shirts are on the shelf after today's deliveries?", unit: "shirts", ans: shelf, hint: "Look at the shelf number above." },
+    { id: "short", label: "Homecoming week needs 750 shirts. How many are we short? Enter 0 if we have enough.", unit: "shirts", ans: Math.max(0, 750 - shelf), hint: "750 − shirts on the shelf." }
+  ];
+}
+const qKey = (r, id) => r + "-" + id;
+function isRight(q, v) { const n = Number(String(v).replace(/[$,\s]/g, "")); return Number.isFinite(n) && Math.abs(n - q.ans) <= Math.max(0.01, Math.abs(q.ans) * 0.005); }
+
+/* ---------- News ---------- */
+function newsHTML(r) {
+  const tw = onTheWay();
+  const supName = { A: "overseas supplier (A)", B: "domestic supplier (B)", C: "local supplier (C)" };
+  const wayText = tw.length ? tw.map(p => fmtN(p.qty) + " from the " + supName[p.sup] + ", arriving in Week " + p.arrive + (p.arrive > 4 ? " (after the game)" : "")).join("<br>") : "Nothing on the way.";
+  const msg = {
+    1: "Welcome aboard! A normal week uses about 250 blank shirts. Homecoming is in Week 4, and that week we'll need about 750. We have 400 shirts on the shelf, and 500 more are coming from our overseas supplier next week. Here are this week's orders.",
+    2: "Bad news: our overseas shipment is stuck at the port. The 500 shirts we expected today will arrive next week instead. Anything new from the overseas supplier will also take one extra week. We still have three orders to fill.",
+    3: "Homecoming orders are pouring in. These four jobs need 12 hours on the press, and we have 10 hours this week (2 a day). Anything that runs past Friday gets finished on Saturday and counts as late. Good news: the delayed shipment arrived this morning. Expect about 75 walk-ins.",
+    4: "It's Homecoming week! Expect about 400 walk-in customers. New orders from the overseas or domestic supplier would arrive after Homecoming, so the local supplier is our last option this week: up to 300 shirts, delivered today."
+  }[r];
+  return `
+  <section class="card news">
+    <p class="eyebrow">Week ${r} of 4</p>
+    <h2>${ROUND_TITLE[r]}</h2>
+    <p class="eyebrow">Message from the owner</p>
+    <p class="quote">${msg}</p>
+  </section>
+  <section class="card">
+    <h3>Customer orders this week</h3>
+    ${jobsList(r)}
+    <p><b>Walk-in customers:</b> about ${WALK[r]} this week, at $15 per shirt.</p>
+  </section>
+  <section class="card">
+    <h3>Your shirts right now</h3>
+    <div class="row">
+      <div class="stat"><b>${fmtN(S.shelf)}</b><span>on the shelf${S.arrivals[r] ? " (" + fmtN(S.arrivals[r]) + " just arrived)" : ""}</span></div>
+      <div class="stat"><b>${fmtN(tw.reduce((s, p) => s + p.qty, 0))}</b><span>on the way</span></div>
+    </div>
+    <p class="hint">${wayText}</p>
+  </section>`;
+}
+function jobsList(r) {
+  return `<div class="stack">${JOBS[r].map(j => `<div class="order-card">
+      <p><b>${esc(j.name)}</b>: ${esc(j.why)}</p>
+      <p class="meta">${j.q} shirts · ${pressTime(j.q)} hours on the press · due ${dueLabel(j.due)} · late penalty ${fmt$(j.pen)}</p>
+    </div>`).join("")}</div>`;
+}
+
+/* ---------- Screens ---------- */
+function screenStory() {
+  return `
+  <section class="card news">
+    <h1>Run the Print Shop</h1>
+    <p>Your team is a group of student consultants. A print shop near campus has hired you to run its operations for the 4 weeks leading up to Homecoming.</p>
+    <p>The shop prints custom shirts for student groups and sells Game Day shirts to walk-in customers. Last week the manager left. Orders keep coming in, a shipment is on the way, and Homecoming is in Week 4.</p>
+    <p>The owner wants two things from you: <b>make the most profit</b> and <b>deliver every job on time</b>.</p>
+  </section>
+  <section class="card">
+    <h3>What the manager left behind</h3>
+    <div class="row">
+      <div class="stat"><b>400</b><span>blank shirts on the shelf</span></div>
+      <div class="stat"><b>500</b><span>shirts on the way from an overseas supplier</span></div>
+      <div class="stat"><b>750</b><span>shirts needed in Homecoming week</span></div>
+    </div>
+    <p class="muted">A normal week uses about 250 shirts. Homecoming needs about three times that.</p>
+  </section>
+  <section class="card">
+    <h3>Your calls each week</h3>
+    <ul class="clean">
+      <li><b>How many shirts to order, and when.</b> Ordering costs a fee every time. Storing shirts costs money too.</li>
+      <li><b>Which supplier to use.</b> The cheap supplier is slow. The fast one costs more.</li>
+      <li><b>Which job to print first.</b> The press runs 10 hours a week, and every job has a due day.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h3>How the game works</h3>
+    <p>The game covers <b>4 weeks</b>. Each week follows the same five steps:</p>
+    <ol class="clean">
+      <li><b>This week:</b> read the owner's message and this week's customer orders.</li>
+      <li><b>Quick math:</b> answer the owner's questions.</li>
+      <li><b>Buy shirts:</b> order from one or more suppliers, or none.</li>
+      <li><b>Plan the press:</b> choose which job to print first.</li>
+      <li><b>Results:</b> see the week's sales, costs, and profit.</li>
+    </ol>
+    <p class="muted">Each screen has to be finished before the next one opens. Orders and press plans are final once you submit them.</p>
+  </section>
+  <section class="card">
+    <h3>The 4 weeks</h3>
+    <div class="tbl-wrap"><table><tbody>
+      <tr><td><b>Week 1</b></td><td><b>Getting started.</b> Figure out how much to order and when. Plan ahead for Homecoming.</td></tr>
+      <tr><td><b>Week 2</b></td><td><b>A shipment is stuck.</b> Order fast, or come up short?</td></tr>
+      <tr><td><b>Week 3</b></td><td><b>Too many orders.</b> More work than the press can handle. Decide which job runs late.</td></tr>
+      <tr><td><b>Week 4</b></td><td><b>Homecoming week.</b> Demand triples. Your earlier choices decide how ready you are.</td></tr>
+      <tr><td><b>Finish</b></td><td><b>Manager's Report.</b> Three sentences on what worked. Some teams present.</td></tr>
+    </tbody></table></div>
+  </section>`;
+}
+function screenJoin() {
+  return `
+  <section class="card news">
+    <p class="eyebrow">Step 1 of 2 before Week 1</p>
+    <h2>Join your team</h2>
+    <p>Your team works as one consulting group on one phone.</p>
+  </section>
+  <section class="card">
+    <div class="field"><label for="team">Team name</label><input id="team" type="text" maxlength="30" autocomplete="off" value="${esc(S.team)}" placeholder="e.g. Golden Press"></div>
+    <div class="field"><label for="members">Team members</label><input id="members" type="text" maxlength="120" autocomplete="off" value="${esc(S.members)}" placeholder="First names, separated by commas"></div>
+    <p class="hint">Your progress stays on this phone if the page reloads.</p>
+  </section>`;
+}
+function screenBrief() {
+  return `
+  <section class="card">
+    <p class="eyebrow">Step 2 of 2 before Week 1</p>
+    <h2>Your starting point</h2>
+    <p class="muted">The game covers 4 weeks.</p>
+    <div class="row">
+      <div class="stat"><b>400</b><span>shirts on the shelf</span></div>
+      <div class="stat"><b>500</b><span>on the way from the overseas supplier, due in Week 2</span></div>
+      <div class="stat"><b>750</b><span>shirts needed in Homecoming week</span></div>
+    </div>
+  </section>
+  <section class="card">
+    <h3>Who buys your shirts</h3>
+    <ul class="clean">
+      <li><b>Custom jobs</b> pay $10 per shirt. They need press time and have a due day.</li>
+      <li><b>Walk-ins</b> pay $15 per shirt. No press time needed.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h3>Where you buy blank shirts</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>Supplier</th><th class="num">Per shirt</th><th class="num">Per order</th><th>Arrives</th></tr></thead><tbody>
+      <tr><td>A: Overseas</td><td class="num">$3.00</td><td class="num">$80</td><td>2 weeks later</td></tr>
+      <tr><td>B: Domestic</td><td class="num">$4.50</td><td class="num">$50</td><td>Next week</td></tr>
+      <tr><td>C: Local</td><td class="num">$6.00</td><td class="num">$20</td><td>This week, max 300 shirts</td></tr>
+    </tbody></table></div>
+    <p class="hint">Example: an order from Supplier A in Week 1 arrives at the start of Week 3. You can order from more than one supplier in the same week.</p>
+  </section>
+  <section class="card">
+    <h3>The press</h3>
+    <ul class="clean">
+      <li>The press runs 2 hours a day, Monday to Friday (10 hours a week).</li>
+      <li>A job due Tuesday must be finished by the end of Tuesday.</li>
+      <li>Each job takes 1 hour to set up plus 1 hour per 50 shirts. Example: 100 shirts = 3 hours.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>How the Shop Works</h2>
+    <h3>1. Filling orders</h3>
+    <ul class="clean">
+      <li>Use available shirts to complete custom jobs in your chosen sequence. Remaining shirts go to walk-in customers.</li>
+      <li>Each custom job needs enough shirts to complete the entire order. If there aren't enough, the job is lost and you pay its penalty.</li>
+    </ul>
+    <h3>2. Deadlines</h3>
+    <ul class="clean">
+      <li>Jobs completed after their deadlines are late: they still earn revenue but incur a penalty. Work beyond 10 hours continues on Saturday at no extra cost.</li>
+    </ul>
+    <h3>3. Inventory costs</h3>
+    <ul class="clean">
+      <li>Leftover shirts cost $0.10 each to store per week.</li>
+      <li>At the end of the game, remaining shirts are sold for $2 each.</li>
+    </ul>
+    <label class="check-line" for="briefOk"><input type="checkbox" id="briefOk" ${S.briefOk ? "checked" : ""}> We've reviewed the rules and are ready to start.</label>
+  </section>`;
+}
+function screenCheck(r) {
+  const qs = questions(r);
+  return `
+  <section class="card">
+    <p class="eyebrow">Week ${r} of 4 · Quick math</p>
+    <h2>The owner's questions</h2>
+    <p class="muted">Answer each one to move on. After 2 wrong tries you get a hint. After 3, you can see the answer.</p>
+    <div class="row"><div class="stat"><b>${fmtN(S.shelfStart[r])}</b><span>shirts on the shelf</span></div><div class="stat"><b>${fmtN(onTheWay().reduce((s, p) => s + p.qty, 0))}</b><span>shirts on the way</span></div></div>
+  </section>
+  <section class="card">
+    ${qs.map(q => {
+      const k = qKey(r, q.id), t = S.tries[k] || 0, ok = S.ok[k], shown = S.shown[k];
+      let fb = "";
+      if (ok) fb = `<p class="feedback good">Correct.</p>`;
+      else if (shown) fb = `<p class="feedback warn">Answer: ${fmtN(q.ans)} ${q.unit}. ${esc(q.hint)}</p>`;
+      else if (t >= 2) fb = `<p class="feedback bad">Not yet. Hint: ${esc(q.hint)}</p>`;
+      else if (t === 1) fb = `<p class="feedback bad">Not yet. Try again.</p>`;
+      const done = ok || shown;
+      return `<div class="q">
+        <label for="q-${q.id}">${esc(q.label)}</label>
+        <div class="q-line">
+          <input id="q-${q.id}" type="number" inputmode="decimal" step="any" value="${esc(S.ans[k] ?? "")}" ${done ? "disabled" : ""} data-q="${q.id}">
+          <span class="unit">${q.unit}</span>
+          <button class="btn" data-check="${q.id}" ${done ? "disabled" : ""}>Check</button>
+        </div>
+        ${fb}
+        ${!done && t >= 3 ? `<button class="btn small" data-show="${q.id}" style="align-self:flex-start">Show the answer</button>` : ""}
+      </div>`;
+    }).join("")}
+  </section>
+  ${r === 1 ? `<section class="card"><h3>Think about it</h3><p>EOQ assumes every week looks the same. Week 4 needs about 750 shirts. If you wait until Week 3 to order for Homecoming, which suppliers can still deliver in time?</p></section>` : ""}
+  ${r === 2 ? `<section class="card"><h3>Think about it</h3><p>A shortage loses job sales, walk-in sales, and late penalties. Compare that with the cost of an emergency order from Supplier C.</p></section>` : ""}`;
+}
+function screenOrder(r) {
+  const d = S.draft[r];
+  return `
+  <section class="card">
+    <p class="eyebrow">Week ${r} of 4 · Buy shirts</p>
+    <h2>Buy blank shirts</h2>
+    <p class="muted">Order any amount from any supplier. You can mix suppliers or order nothing. Supplier C is limited to 300 shirts per week.</p>
+    <div class="row"><div class="stat"><b>${fmtN(S.shelf)}</b><span>on the shelf</span></div><div class="stat"><b>${fmtN(onTheWay().reduce((s, p) => s + p.qty, 0))}</b><span>on the way</span></div><div class="stat"><b>${fmtN(JOBS[r].reduce((s, j) => s + j.q, 0) + WALK[r])}</b><span>needed this week</span></div></div>
+  </section>
+  <section class="card">
+    ${["A", "B", "C"].map(k => {
+      const s = SUP[k], arr = arriveRound(k, r);
+      const when = k === "C" ? "Arrives today, max 300" : "Arrives in Week " + arr + (arr > 4 ? " (after the game)" : "");
+      return `<div class="sup">
+        <div><label for="o-${k}">Supplier ${esc(s.name)}</label><p class="meta">$${s.price.toFixed(2)} per shirt + $${s.fee} per order · ${when}</p></div>
+        <input id="o-${k}" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${esc(d[k])}" data-order="${k}">
+      </div>`;
+    }).join("")}
+  </section>
+  <section class="card" id="orderSummary">${orderSummary(r)}</section>`;
+}
+function orderSummary(r) {
+  const d = S.draft[r], o = { A: parseQty(d.A), B: parseQty(d.B), C: parseQty(d.C) };
+  const cost = orderCost(o), total = o.A + o.B + o.C;
+  const lines = ["A", "B", "C"].filter(k => o[k] > 0).map(k => `<li>${fmtN(o[k])} from ${k}: ${fmt$(SUP[k].price * o[k])} + ${fmt$(SUP[k].fee)} fee</li>`).join("");
+  const warn = o.C > 300 ? `<p class="feedback bad">Supplier C can send at most 300 shirts per week.</p>` : "";
+  const warnA = (o.A > 0 && arriveRound("A", r) > 4) ? `<p class="feedback warn">Supplier A shirts ordered now arrive after the game. They sell for $2 each at the end.</p>` : "";
+  const warnB = (o.B > 0 && arriveRound("B", r) > 4) ? `<p class="feedback warn">Supplier B shirts ordered now arrive after the game. They sell for $2 each at the end.</p>` : "";
+  return `<h3>Order total: ${fmt$(cost)}</h3>${total ? `<ul class="clean">${lines}</ul>` : `<p class="muted">No shirts ordered this week.</p>`}
+  <p class="hint">Shelf after Supplier C: ${fmtN(S.shelf + Math.min(o.C, 300))} shirts.</p>${warn}${warnA}${warnB}`;
+}
+function orderValid(r) { const d = S.draft[r]; return parseQty(d.C) <= 300; }
+
+function screenSchedule(r) {
+  const sim = simulate(r, S.seq[r], S.shelf);
+  const byId = {}; JOBS[r].forEach(j => byId[j.id] = j);
+  return `
+  <section class="card">
+    <p class="eyebrow">Week ${r} of 4 · Plan the press</p>
+    <h2>Plan the press</h2>
+    <p class="muted">The press runs 2 hours a day, Monday to Friday. Choose the order to print this week's jobs: tap a rule, or move jobs with the arrows.</p>
+    <div class="row" role="group" aria-label="Sorting rules">
+      <button class="btn" data-rule="fcfs" aria-pressed="${ruleMatch(r, "fcfs")}">FCFS</button>
+      <button class="btn" data-rule="spt" aria-pressed="${ruleMatch(r, "spt")}">SPT</button>
+      <button class="btn" data-rule="edd" aria-pressed="${ruleMatch(r, "edd")}">EDD</button>
+    </div>
+    <p class="hint">FCFS: in the order customers called · SPT: shortest job first · EDD: earliest due day first</p>
+    <p class="feedback warn">${ruleNote(r)}</p>
+  </section>
+  <section class="card">
+    ${S.seq[r].map((id, i) => {
+      const j = byId[id], row = sim.rows[i];
+      const pill = row.status === "ok" ? `<span class="pill good">On time · done ${doneDay(row.end)}</span>` : row.status === "late" ? `<span class="pill warn">Late · done ${doneDay(row.end)} · −${fmt$(row.pen)}</span>` : `<span class="pill bad">Not enough shirts · lost · −${fmt$(row.pen)}</span>`;
+      return `<div class="job">
+        <div class="n">${i + 1}</div>
+        <div style="min-width:0"><b>${esc(j.name)}</b><p class="meta">${j.q} shirts · ${pressTime(j.q)} hours · due ${dueLabel(j.due)}</p>${pill}</div>
+        <div class="moves"><button class="btn small" data-up="${i}" aria-label="Move ${esc(j.name)} up" ${i === 0 ? "disabled" : ""}>↑</button><button class="btn small" data-down="${i}" aria-label="Move ${esc(j.name)} down" ${i === S.seq[r].length - 1 ? "disabled" : ""}>↓</button></div>
+      </div>`;
+    }).join("")}
+  </section>
+  <section class="card">
+    <h3>This week on the press</h3>
+    ${gantt(sim)}
+    <div class="row">
+      <div class="stat"><b>${fmt$(sim.pen)}</b><span>late penalties</span></div>
+      <div class="stat"><b>${fmtN(sim.walkServed)} / ${WALK[r]}</b><span>walk-ins served</span></div>
+      <div class="stat"><b>${fmtN(sim.end)}</b><span>shirts left after the week</span></div>
+    </div>
+  </section>`;
+}
+function ruleOrder(r, rule) {
+  const js = JOBS[r].slice();
+  if (rule === "spt") js.sort((a, b) => pressTime(a.q) - pressTime(b.q) || a.due - b.due);
+  if (rule === "edd") js.sort((a, b) => a.due - b.due || pressTime(a.q) - pressTime(b.q));
+  return js.map(j => j.id);
+}
+function currentRule(r) { S.rule = S.rule || {}; return S.rule[r] || "fcfs"; }
+function ruleMatch(r, rule) { return String(currentRule(r) === rule); }
+const RULE_NAME = { fcfs: "FCFS", spt: "SPT", edd: "EDD" };
+function ruleNote(r) {
+  const cur = currentRule(r);
+  if (cur === "custom") return "Custom order: you moved the jobs yourself.";
+  const same = ["fcfs", "spt", "edd"].filter(k => k !== cur && ruleOrder(r, k).join() === ruleOrder(r, cur).join()).map(k => RULE_NAME[k]);
+  return "Using " + RULE_NAME[cur] + "." + (same.length ? " This week " + same.join(" and ") + " give" + (same.length === 1 ? "s" : "") + " the same order." : "");
+}
+function gantt(sim) {
+  const W = 600, L = 8, R = 8, per = (W - L - R) / 12, rowH = 30, top = 26;
+  const H = top + sim.rows.length * rowH + 8;
+  const x = h => L + h * per;
+  let g = `<svg class="gantt" viewBox="0 0 ${W} ${H}" role="img" aria-label="Press schedule by hour">`;
+  g += `<rect x="${x(10)}" y="${top - 6}" width="${per * 2}" height="${H - top}" fill="var(--soft)"/>`;
+  [0, 2, 4, 6, 8, 10, 12].forEach(h => { g += `<line x1="${x(h)}" x2="${x(h)}" y1="${top - 6}" y2="${H - 2}" stroke="var(--line)" stroke-width="1"/>`; });
+  [["Mon", 1], ["Tue", 3], ["Wed", 5], ["Thu", 7], ["Fri", 9], ["Sat", 11]].forEach(([d, h]) => { g += `<text x="${x(h)}" y="14" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink-2)" font-family="Public Sans, Arial, sans-serif">${d}</text>`; });
+  sim.rows.forEach((row, i) => {
+    const y = top + i * rowH;
+    if (row.status === "lost") { g += `<text x="${x(0) + 4}" y="${y + 17}" font-size="12" fill="var(--bad)" font-family="Public Sans, Arial, sans-serif">${esc(row.j.name)}: not enough shirts</text>`; return; }
+    const col = row.status === "ok" ? "var(--good)" : "var(--warn)";
+    g += `<rect x="${x(row.start)}" y="${y}" width="${per * (row.end - row.start)}" height="${rowH - 8}" rx="4" fill="${col}" opacity="0.9"/>`;
+    g += `<line x1="${x(row.j.due)}" x2="${x(row.j.due)}" y1="${y - 2}" y2="${y + rowH - 6}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 2"/>`;
+    g += `<text x="${x(row.start) + 6}" y="${y + 15}" font-size="11.5" font-weight="700" fill="var(--card)" font-family="Public Sans, Arial, sans-serif">${esc(shortName(row.j.name, row.end - row.start))}</text>`;
+  });
+  g += `</svg><p class="hint">Each bar is a job on the press. The dashed line marks the end of its due day. Saturday (shaded) is overtime.</p>`;
+  return g;
+}
+function shortName(n, hrs) { const max = Math.floor(hrs * 5.8); return n.length > max ? n.slice(0, Math.max(3, max - 1)) + "…" : n; }
+
+function screenResults(r) {
+  const x = S.results[r];
+  return `
+  <section class="card news">
+    <p class="eyebrow">Week ${r} of 4 · Results</p>
+    <h2>${x.profit >= 0 ? "Week profit " + fmt$(x.profit) : "Week loss " + fmt$(x.profit)}</h2>
+    <p>${x.onTime} of ${JOBS[r].length} jobs on time${x.late.length ? " · late: " + esc(x.late.join(", ")) : ""}${x.lost.length ? " · lost: " + esc(x.lost.join(", ")) : ""}.</p>
+  </section>
+  <section class="card">
+    <div class="tbl-wrap"><table><tbody>
+      <tr><td>Job sales</td><td class="num">${fmt$(x.jobRev)}</td></tr>
+      <tr><td>Walk-in sales (${WALK[r] - x.walkLost} of ${WALK[r]} served)</td><td class="num">${fmt$(x.walkRev)}</td></tr>
+      <tr><td>Shirts bought this week</td><td class="num">${fmt$(-x.purch)}</td></tr>
+      <tr><td>Storage (${fmtN(x.end)} shirts × $0.10)</td><td class="num">${fmt$(-x.hold)}</td></tr>
+      <tr><td>Late and lost-job penalties</td><td class="num">${fmt$(-x.pen)}</td></tr>
+      <tr><th>Week total</th><th class="num">${fmt$(x.profit)}</th></tr>
+    </tbody></table></div>
+    <div class="row">
+      <div class="stat"><b>${fmtN(x.walkLost)}</b><span>walk-ins lost</span></div>
+      <div class="stat"><b>${fmtN(x.end)}</b><span>shirts left on the shelf</span></div>
+      <div class="stat"><b>${fmt$(profitSoFar())}</b><span>profit so far</span></div>
+    </div>
+  </section>`;
+}
+
+function screenFinal() {
+  const f = S.final;
+  return `
+  <section class="card news">
+    <p class="eyebrow">Game over</p>
+    <h1>${fmt$(f.profit)}</h1>
+    <p>Final profit for ${esc(S.team)}.</p>
+  </section>
+  <section class="card">
+    <div class="row">
+      <div class="stat"><b>${f.onTime} / ${TOTAL_JOBS}</b><span>jobs on time</span></div>
+      <div class="stat"><b>${fmtN(f.walkLost)}</b><span>walk-ins lost</span></div>
+      <div class="stat"><b>${fmtN(f.salvageUnits)}</b><span>shirts sold off at $2</span></div>
+    </div>
+    ${roundTable()}
+  </section>
+`;
+}
+function roundTable() {
+  const rows = [1, 2, 3, 4].map(r => {
+    const x = S.results[r], o = S.orders[r] || {};
+    const ord = ["A", "B", "C"].filter(k => o[k] > 0).map(k => k + " " + o[k]).join(", ") || "None";
+    return `<tr><td>${r}</td><td>${ord}</td><td class="num">${x.onTime}/${JOBS[r].length}</td><td class="num">${x.walkLost}</td><td class="num">${fmt$(x.profit)}</td></tr>`;
+  }).join("");
+  const f = S.final;
+  return `<div class="tbl-wrap"><table><thead><tr><th>Week</th><th>Orders</th><th class="num">On time</th><th class="num">Lost</th><th class="num">Profit</th></tr></thead><tbody>${rows}
+  <tr><td colspan="4">Leftover shirts sold at $2</td><td class="num">${fmt$(f.salvage)}</td></tr>
+  <tr><th colspan="4">Total</th><th class="num">${fmt$(f.profit)}</th></tr></tbody></table></div>`;
+}
+const PROMPTS = ["Our best decision was…", "Our biggest mistake was…", "If we had one more week, we would change…"];
+function screenReport() {
+  return `
+  <section class="card">
+    <p class="eyebrow">Manager's Report</p>
+    <h2>Write three sentences</h2>
+    <p class="muted">Finish each sentence. If your team presents, explain the one decision that had the biggest effect on your results.</p>
+  </section>
+  <section class="card">
+    ${PROMPTS.map((p, i) => `<div class="field"><label for="refl${i}">${p}</label><textarea id="refl${i}" data-refl="${i}" maxlength="400">${esc(S.refl[i])}</textarea></div>`).join("")}
+    <p class="hint">Each answer needs at least 15 characters.</p>
+  </section>`;
+}
+function reportText() {
+  const f = S.final;
+  const ord = [1, 2, 3, 4].map(r => { const o = S.orders[r] || {}; return "W" + r + ": " + (["A", "B", "C"].filter(k => o[k] > 0).map(k => k + " " + o[k]).join(", ") || "none"); }).join(" | ");
+  return [
+    "Print Shop Manager's Report",
+    "Team: " + S.team, "Members: " + S.members,
+    "Profit: " + fmt$(f.profit) + " | Jobs on time: " + f.onTime + "/" + TOTAL_JOBS + " | Walk-ins lost: " + f.walkLost + " | Shirts sold off: " + f.salvageUnits,
+    "Orders: " + ord,
+    PROMPTS[0] + " " + S.refl[0].trim(), PROMPTS[1] + " " + S.refl[1].trim(), PROMPTS[2] + " " + S.refl[2].trim()
+  ].join("\n");
+}
+function screenDone() {
+  const f = S.final;
+  return `
+  <section class="card news">
+    <p class="eyebrow">Manager's Report</p>
+    <h2>${esc(S.team)}</h2>
+    <p>${esc(S.members)}</p>
+  </section>
+  <section class="card">
+    <div class="row">
+      <div class="stat"><b>${fmt$(f.profit)}</b><span>profit</span></div>
+      <div class="stat"><b>${f.onTime} / ${TOTAL_JOBS}</b><span>jobs on time</span></div>
+      <div class="stat"><b>${fmtN(f.walkLost)}</b><span>walk-ins lost</span></div>
+      <div class="stat"><b>${fmtN(f.salvageUnits)}</b><span>leftover shirts</span></div>
+    </div>
+    ${roundTable()}
+  </section>
+  <section class="card">
+    ${PROMPTS.map((p, i) => `<div class="quote"><p class="eyebrow">${p.replace("…", "")}</p><p>${esc(S.refl[i])}</p></div>`).join("")}
+  </section>
+  <section class="card">
+    <h3>Share your report</h3>
+    <div class="row"><button class="btn" id="copyReport">Copy report text</button></div>
+    <p class="hint" id="copyMsg">Copy the report and submit it where your instructor asks.</p>
+    <textarea id="reportText" readonly hidden></textarea>
+  </section>
+  <section class="card">
+    <h3>Play again</h3>
+    <p class="muted">This clears your team's game on this phone.</p>
+    <div class="row"><button class="btn" id="resetAsk">Start over</button><button class="btn" id="resetYes" hidden>Yes, clear our game</button></div>
+  </section>`;
+}
+
+/* ---------- Gates: what must be done before Next ---------- */
+function gate() {
+  if (S.view === "story") return { ok: true, msg: "", label: "Join your team" };
+  if (S.view === "join") {
+    if (S.team.trim().length < 2) return { ok: false, msg: "Enter a team name to continue.", label: "Start" };
+    if (S.members.trim().length < 2) return { ok: false, msg: "Enter your team members to continue.", label: "Start" };
+    return { ok: true, msg: "", label: "Start" };
+  }
+  if (S.view === "brief") return S.briefOk ? { ok: true, msg: "", label: "Start Week 1" } : { ok: false, msg: "Tick the box when your team has reviewed the rules.", label: "Start Week 1" };
+  if (S.view === "round") {
+    const r = S.r;
+    if (S.step === "news") return { ok: true, msg: "", label: "Next: the owner's questions" };
+    if (S.step === "check") {
+      const left = questions(r).filter(q => !(S.ok[qKey(r, q.id)] || S.shown[qKey(r, q.id)])).length;
+      return left ? { ok: false, msg: left + (left === 1 ? " question" : " questions") + " left to answer.", label: "Next: buy shirts" } : { ok: true, msg: "", label: "Next: buy shirts" };
+    }
+    if (S.step === "order") {
+      if (!orderValid(r)) return { ok: false, msg: "Supplier C can send at most 300 shirts.", label: "Place order" };
+      const d = S.draft[r], cost = orderCost({ A: parseQty(d.A), B: parseQty(d.B), C: parseQty(d.C) });
+      return { ok: true, msg: "Orders are final once placed.", label: cost ? "Place order · " + fmt$(cost) : "Don't buy shirts this week" };
+    }
+    if (S.step === "schedule") return { ok: true, msg: "Running the week locks in this press plan.", label: "Run the week" };
+    if (S.step === "results") return { ok: true, msg: "", label: r < 4 ? "Start Week " + (r + 1) : "See final results" };
+  }
+  if (S.view === "final") return { ok: true, msg: "", label: "Write the Manager's Report" };
+  if (S.view === "report") {
+    const short = S.refl.filter(t => t.trim().length < 15).length;
+    return short ? { ok: false, msg: short + " of 3 sentences still too short.", label: "Finish the report" } : { ok: true, msg: "", label: "Finish the report" };
+  }
+  return null;
+}
+function next() {
+  const g = gate(); if (!g || !g.ok) return;
+  if (S.view === "story") { S.view = "join"; }
+  else if (S.view === "join") { S.view = "brief"; }
+  else if (S.view === "brief") { S.view = "round"; S.r = 1; S.step = "news"; enterRound(1); }
+  else if (S.view === "round") {
+    const r = S.r;
+    if (S.step === "news") S.step = "check";
+    else if (S.step === "check") S.step = "order";
+    else if (S.step === "order") { placeOrders(r); S.step = "schedule"; }
+    else if (S.step === "schedule") { runWeek(r); S.step = "results"; }
+    else if (S.step === "results") {
+      if (r < 4) { S.r = r + 1; S.step = "news"; enterRound(S.r); }
+      else { finish(); S.view = "final"; }
+    }
+  }
+  else if (S.view === "final") S.view = "report";
+  else if (S.view === "report") S.view = "done";
+  save(); render(); window.scrollTo(0, 0);
+}
+
+/* ---------- Render ---------- */
+const $ = id => document.getElementById(id);
+function renderTop() {
+  const reg = `<svg class="reg" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><line x1="9" y1="0" x2="9" y2="18" stroke="var(--gold)" stroke-width="1.6"/><line x1="0" y1="9" x2="18" y2="9" stroke="var(--gold)" stroke-width="1.6"/></svg>`;
+  let steps = "";
+  if (S.view === "round") {
+    const idx = STEPS.findIndex(s => s[0] === S.step);
+    steps = `<div class="steps"><span class="round-chip">Week ${S.r} / 4</span>${STEPS.map((s, i) => `<span class="dot ${i === idx ? "on" : i < idx ? "done" : ""}">${s[1]}</span>`).join("")}</div>`;
+  } else if (S.view === "brief") steps = `<div class="steps"><span class="round-chip">Briefing</span></div>`;
+  else if (S.view === "join") steps = `<div class="steps"><span class="round-chip">Join</span></div>`;
+  else if (S.view === "final" || S.view === "report" || S.view === "done") steps = `<div class="steps"><span class="round-chip">Wrap-up</span></div>`;
+  $("top").innerHTML = `<div class="wrap"><div class="top-row"><div class="brand">${S.team ? `${reg}<span>${esc(S.team)}</span>` : ""}</div><div class="top-right">${Object.keys(S.results).length ? `<div class="money"><small>Profit</small>${fmt$(profitSoFar())}</div>` : ""}${S.view !== "story" ? `<button class="restart" id="topReset">Start over</button>` : ""}</div></div>${steps}</div>`;
+  const tr = $("topReset");
+  if (tr) tr.onclick = () => {
+    if (tr.dataset.armed) { S = fresh(); save(); render(); window.scrollTo(0, 0); return; }
+    tr.dataset.armed = "1"; tr.textContent = "Tap again to clear";
+    setTimeout(() => { if (tr.isConnected) { delete tr.dataset.armed; tr.textContent = "Start over"; } }, 4000);
+  };
+}
+function renderBottom() {
+  const g = gate();
+  if (!g) { $("bottom").hidden = true; return; }
+  $("bottom").hidden = false;
+  $("bottom").innerHTML = `<div class="wrap"><p class="gate" id="gateMsg">${esc(g.msg)}</p><button class="primary" id="nextBtn" ${g.ok ? "" : "disabled"}>${esc(g.label)}</button></div>`;
+  $("nextBtn").addEventListener("click", next);
+}
+function refreshGate() {
+  const g = gate(); if (!g) return;
+  const b = $("nextBtn"), m = $("gateMsg");
+  if (b) { b.disabled = !g.ok; b.textContent = g.label; }
+  if (m) m.textContent = g.msg;
+}
+function render() {
+  if (location.hash === "#instructor") { renderInstructor(); return; }
+  document.body.classList.remove("instructor");
+  renderTop();
+  let html = "";
+  if (S.view === "story") html = screenStory();
+  else if (S.view === "join") html = screenJoin();
+  else if (S.view === "brief") html = screenBrief();
+  else if (S.view === "round") {
+    const r = S.r;
+    if (S.step === "news") html = newsHTML(r);
+    else if (S.step === "check") html = screenCheck(r);
+    else if (S.step === "order") html = screenOrder(r);
+    else if (S.step === "schedule") html = screenSchedule(r);
+    else html = screenResults(r);
+  }
+  else if (S.view === "final") html = screenFinal();
+  else if (S.view === "report") html = screenReport();
+  else html = screenDone();
+  $("app").innerHTML = html;
+  renderBottom();
+  bind();
+}
+function bind() {
+  const app = $("app");
+  const team = $("team"), members = $("members");
+  if (team) team.addEventListener("input", e => { S.team = e.target.value; save(); refreshGate(); });
+  if (members) members.addEventListener("input", e => { S.members = e.target.value; save(); refreshGate(); });
+  const bo = $("briefOk"); if (bo) bo.addEventListener("change", e => { S.briefOk = e.target.checked; save(); refreshGate(); });
+
+  app.querySelectorAll("[data-q]").forEach(inp => {
+    inp.addEventListener("input", e => { S.ans[qKey(S.r, e.target.dataset.q)] = e.target.value; save(); });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); checkQ(e.target.dataset.q); } });
+  });
+  app.querySelectorAll("[data-check]").forEach(b => b.addEventListener("click", () => checkQ(b.dataset.check)));
+  app.querySelectorAll("[data-show]").forEach(b => b.addEventListener("click", () => { S.shown[qKey(S.r, b.dataset.show)] = true; save(); render(); }));
+
+  app.querySelectorAll("[data-order]").forEach(inp => inp.addEventListener("input", e => {
+    S.draft[S.r][e.target.dataset.order] = e.target.value; save();
+    $("orderSummary").innerHTML = orderSummary(S.r); refreshGate();
+  }));
+
+  app.querySelectorAll("[data-rule]").forEach(b => b.addEventListener("click", () => { S.rule = S.rule || {}; S.rule[S.r] = b.dataset.rule; S.seq[S.r] = ruleOrder(S.r, b.dataset.rule); save(); render(); }));
+  app.querySelectorAll("[data-up]").forEach(b => b.addEventListener("click", () => moveJob(+b.dataset.up, -1)));
+  app.querySelectorAll("[data-down]").forEach(b => b.addEventListener("click", () => moveJob(+b.dataset.down, 1)));
+
+  app.querySelectorAll("[data-refl]").forEach(t => t.addEventListener("input", e => { S.refl[+e.target.dataset.refl] = e.target.value; save(); refreshGate(); }));
+
+  const copy = $("copyReport");
+  if (copy) copy.addEventListener("click", () => {
+    const text = reportText(), msg = $("copyMsg");
+    const fallback = () => { const ta = $("reportText"); ta.value = text; ta.hidden = false; ta.focus(); ta.select(); msg.textContent = "Select all of the text below and copy it."; };
+    try { navigator.clipboard.writeText(text).then(() => { msg.textContent = "Copied. Paste it where your instructor asks."; }, fallback); } catch (e) { fallback(); }
+  });
+  const ra = $("resetAsk"), ry = $("resetYes");
+  if (ra) ra.addEventListener("click", () => { ry.hidden = false; ra.textContent = "Cancel"; ra.onclick = () => render(); });
+  if (ry) ry.addEventListener("click", () => { S = fresh(); save(); render(); window.scrollTo(0, 0); });
+}
+function checkQ(id) {
+  const r = S.r, q = questions(r).find(x => x.id === id), k = qKey(r, id);
+  if (!q || S.ok[k] || S.shown[k]) return;
+  const v = S.ans[k];
+  if (v === undefined || String(v).trim() === "") return;
+  if (isRight(q, v)) S.ok[k] = true; else S.tries[k] = (S.tries[k] || 0) + 1;
+  save(); render();
+  const nextInput = document.querySelector("[data-q]:not([disabled])"); if (nextInput) nextInput.focus({ preventScroll: true });
+}
+function moveJob(i, d) {
+  const a = S.seq[S.r], j = i + d; if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]];
+  S.rule = S.rule || {}; S.rule[S.r] = "custom";
+  save(); render();
+}
+
+/* ---------- Instructor view (#instructor) ---------- */
+const IKEY = "tiger-prints-instructor-v1";
+const SEGS = [ ["Join + intro", 3], ["Week 1", 8], ["Week 2", 4], ["Week 3", 5], ["Week 4", 4], ["Report", 4], ["Presentations", 8], ["Wrap-up", 4] ];
+let I = (function () { try { return JSON.parse(localStorage.getItem(IKEY)) || null; } catch (e) { return null; } })() || { teams: [], seg: 0, left: SEGS[0][1] * 60, running: false };
+let tick = null;
+function isave() { try { localStorage.setItem(IKEY, JSON.stringify(I)); } catch (e) {} }
+function renderInstructor() {
+  document.body.classList.add("instructor");
+  $("top").innerHTML = `<div class="wrap"><div class="top-row"><div class="brand"><span>Print Shop · Instructor</span></div><a href="#" style="color:var(--ink);font-weight:700">Team view</a></div></div>`;
+  $("bottom").hidden = true;
+  const sorted = I.teams.slice().sort((a, b) => b.profit - a.profit);
+  const mm = String(Math.floor(I.left / 60)).padStart(2, "0"), ss = String(I.left % 60).padStart(2, "0");
+  $("app").innerHTML = `
+  <section class="card">
+    <p class="eyebrow">Class timer · 40 minutes</p>
+    <h2>${esc(SEGS[I.seg][0])}</h2>
+    <p class="timer" id="timer" aria-live="polite">${mm}:${ss}</p>
+    <div class="row"><button class="btn" id="tPlay">${I.running ? "Pause" : "Start"}</button><button class="btn" id="tNext">Next segment</button><button class="btn" id="tReset">Reset segment</button></div>
+    <div class="seg-list">${SEGS.map((s, i) => `<button class="btn small" data-seg="${i}" aria-pressed="${i === I.seg}">${esc(s[0])} · ${s[1]}m</button>`).join("")}</div>
+  </section>
+  <section class="card">
+    <h3>Add a team</h3>
+    <div class="row">
+      <div class="field"><label for="iTeam">Team name</label><input id="iTeam" type="text" maxlength="30" autocomplete="off"></div>
+      <div class="field"><label for="iProfit">Final profit ($)</label><input id="iProfit" type="number" inputmode="decimal" step="any" autocomplete="off"></div>
+      <div class="field"><label for="iOn">Jobs on time (of 13)</label><input id="iOn" type="number" inputmode="numeric" min="0" max="13" step="1" autocomplete="off"></div>
+      <div class="field"><label for="iLost">Walk-ins lost</label><input id="iLost" type="number" inputmode="numeric" min="0" step="1" autocomplete="off"></div>
+    </div>
+    <div class="row"><button class="btn" id="iAdd">Add to leaderboard</button></div>
+    <p class="hint" id="iMsg">Teams read these numbers from their final screen.</p>
+  </section>
+  <section class="card">
+    <h3>Leaderboard</h3>
+    ${sorted.length ? `<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Team</th><th class="num">Profit</th><th class="num">On time</th><th class="num">Walk-ins lost</th><th></th></tr></thead><tbody>${
+      sorted.map((t, i) => `<tr><td class="rank">${i + 1}</td><td>${esc(t.name)}</td><td class="num">${fmt$(t.profit)}</td><td class="num">${t.onTime}/${TOTAL_JOBS}</td><td class="num">${t.lost}</td><td class="num"><button class="btn small" data-del="${esc(t.id)}" aria-label="Remove ${esc(t.name)}">Remove</button></td></tr>`).join("")
+    }</tbody></table></div>` : `<p class="muted">No teams yet. Add each team's name and final numbers above when they finish Week 4.</p>`}
+    <p class="hint">Saved on this device only.</p>
+  </section>`;
+  $("tPlay").onclick = () => { I.running = !I.running; isave(); startTick(); renderInstructor(); };
+  $("tNext").onclick = () => { I.seg = Math.min(SEGS.length - 1, I.seg + 1); I.left = SEGS[I.seg][1] * 60; isave(); renderInstructor(); };
+  $("tReset").onclick = () => { I.left = SEGS[I.seg][1] * 60; isave(); renderInstructor(); };
+  document.querySelectorAll("[data-seg]").forEach(b => b.onclick = () => { I.seg = +b.dataset.seg; I.left = SEGS[I.seg][1] * 60; isave(); renderInstructor(); });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { I.teams = I.teams.filter(t => t.id !== b.dataset.del); isave(); renderInstructor(); });
+  $("iAdd").onclick = () => {
+    const name = $("iTeam").value.trim(), msg = $("iMsg");
+    const profit = Number($("iProfit").value), on = Math.round(Number($("iOn").value)), lostN = Math.round(Number($("iLost").value || 0));
+    if (!name) { msg.textContent = "Enter the team name."; return; }
+    if ($("iProfit").value === "" || !Number.isFinite(profit)) { msg.textContent = "Enter the team's final profit."; return; }
+    if ($("iOn").value === "" || !Number.isFinite(on) || on < 0 || on > TOTAL_JOBS) { msg.textContent = "Jobs on time must be a number from 0 to 13."; return; }
+    const dec = { profit, onTime: on, lost: Math.max(0, lostN || 0), left: 0 };
+    I.teams = I.teams.filter(t => t.name.toLowerCase() !== name.toLowerCase());
+    I.teams.push({ id: String(Date.now()), name, profit: dec.profit, onTime: dec.onTime, lost: dec.lost, left: dec.left });
+    isave(); renderInstructor();
+  };
+  startTick();
+}
+function startTick() {
+  if (tick) { clearInterval(tick); tick = null; }
+  if (!I.running) return;
+  tick = setInterval(() => {
+    if (location.hash !== "#instructor") return;
+    if (I.left > 0) I.left -= 1;
+    if (I.left === 0) I.running = false;
+    isave();
+    const el = $("timer");
+    if (el) el.textContent = String(Math.floor(I.left / 60)).padStart(2, "0") + ":" + String(I.left % 60).padStart(2, "0");
+    if (!I.running) { clearInterval(tick); tick = null; renderInstructor(); }
+  }, 1000);
+}
+
+window.addEventListener("hashchange", () => { if (tick && location.hash !== "#instructor") { clearInterval(tick); tick = null; } render(); window.scrollTo(0, 0); });
+
+/* Exposed for testing in a console; the game does not use it. */
+window.__tigerPrints = { simulate, makeCode, readCode, SUP, JOBS };
+
+function start(data) { if (data && data.S && data.S.v === 2) S = data.S; render(); }
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start); else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
